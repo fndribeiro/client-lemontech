@@ -1,0 +1,171 @@
+
+package br.com.lemontech.wsclient;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.XmlType;
+
+
+/**
+ * <p>Java class for aereoTarifa complex type.
+ * 
+ * <p>The following schema fragment specifies the expected content contained within this class.
+ * 
+ * <pre>
+ * &lt;complexType name="aereoTarifa">
+ *   &lt;complexContent>
+ *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
+ *       &lt;sequence>
+ *         &lt;element name="acordo" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="classe" type="{http://lemontech.com.br/selfbooking/wsselfbooking/beans/types}classe" minOccurs="0"/>
+ *         &lt;element name="aereoTarifaPax" type="{http://lemontech.com.br/selfbooking/wsselfbooking/beans/aereo}aereoTarifaPax" maxOccurs="unbounded" minOccurs="0"/>
+ *         &lt;element name="familiaTarifaria" type="{http://www.w3.org/2001/XMLSchema}string" minOccurs="0"/>
+ *         &lt;element name="bagagem" type="{http://www.w3.org/2001/XMLSchema}boolean"/>
+ *       &lt;/sequence>
+ *     &lt;/restriction>
+ *   &lt;/complexContent>
+ * &lt;/complexType>
+ * </pre>
+ * 
+ * 
+ */
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "aereoTarifa", namespace = "http://lemontech.com.br/selfbooking/wsselfbooking/beans/aereo", propOrder = {
+    "acordo",
+    "classe",
+    "aereoTarifaPax",
+    "familiaTarifaria",
+    "bagagem"
+})
+public class AereoTarifa {
+
+    protected String acordo;
+    @XmlSchemaType(name = "string")
+    protected Classe classe;
+    @XmlElement(nillable = true)
+    protected List<AereoTarifaPax> aereoTarifaPax;
+    protected String familiaTarifaria;
+    protected boolean bagagem;
+
+    /**
+     * Gets the value of the acordo property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getAcordo() {
+        return acordo;
+    }
+
+    /**
+     * Sets the value of the acordo property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setAcordo(String value) {
+        this.acordo = value;
+    }
+
+    /**
+     * Gets the value of the classe property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link Classe }
+     *     
+     */
+    public Classe getClasse() {
+        return classe;
+    }
+
+    /**
+     * Sets the value of the classe property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link Classe }
+     *     
+     */
+    public void setClasse(Classe value) {
+        this.classe = value;
+    }
+
+    /**
+     * Gets the value of the aereoTarifaPax property.
+     * 
+     * <p>
+     * This accessor method returns a reference to the live list,
+     * not a snapshot. Therefore any modification you make to the
+     * returned list will be present inside the JAXB object.
+     * This is why there is not a <CODE>set</CODE> method for the aereoTarifaPax property.
+     * 
+     * <p>
+     * For example, to add a new item, do as follows:
+     * <pre>
+     *    getAereoTarifaPax().add(newItem);
+     * </pre>
+     * 
+     * 
+     * <p>
+     * Objects of the following type(s) are allowed in the list
+     * {@link AereoTarifaPax }
+     * 
+     * 
+     */
+    public List<AereoTarifaPax> getAereoTarifaPax() {
+        if (aereoTarifaPax == null) {
+            aereoTarifaPax = new ArrayList<AereoTarifaPax>();
+        }
+        return this.aereoTarifaPax;
+    }
+
+    /**
+     * Gets the value of the familiaTarifaria property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link String }
+     *     
+     */
+    public String getFamiliaTarifaria() {
+        return familiaTarifaria;
+    }
+
+    /**
+     * Sets the value of the familiaTarifaria property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link String }
+     *     
+     */
+    public void setFamiliaTarifaria(String value) {
+        this.familiaTarifaria = value;
+    }
+
+    /**
+     * Gets the value of the bagagem property.
+     * 
+     */
+    public boolean isBagagem() {
+        return bagagem;
+    }
+
+    /**
+     * Sets the value of the bagagem property.
+     * 
+     */
+    public void setBagagem(boolean value) {
+        this.bagagem = value;
+    }
+
+}
