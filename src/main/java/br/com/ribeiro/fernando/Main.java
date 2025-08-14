@@ -28,72 +28,65 @@ public class Main {
     private static final int TOTAL_RESULTS = 119414;
     private static final int PAGE_SIZE     = 50;
     private static final int TOTAL_REQUESTS = (int) Math.ceil(TOTAL_RESULTS / (double) PAGE_SIZE);
-    private static final int THREADS_PER_BATCH = 10;
+
+    private static final int THREAD_POOL_SIZE = 50; // maximum concurrent threads
 
     public static void main(String[] args) throws Exception {
 
         long startTime = System.currentTimeMillis();
-        System.out.println("=== Starting batch process for " + TOTAL_RESULTS + " results, " 
+        System.out.println("=== Starting process for " + TOTAL_RESULTS + " results, " 
                            + TOTAL_REQUESTS + " requests needed ===");
 
-        ExecutorService executor = Executors.newFixedThreadPool(THREADS_PER_BATCH);
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
         DatatypeFactory factory = DatatypeFactory.newInstance();
+        JAXBContext jaxbContext = JAXBContext.newInstance(PesquisarSolicitacaoResponse.class);
+
+        List<Future<PesquisarSolicitacaoResponse>> futures = new ArrayList<>();
+
         int registroInicial = 1;
+        for (int reqNum = 1; reqNum <= TOTAL_REQUESTS; reqNum++) {
+            final int start = registroInicial;
+            final int requestNumber = reqNum;
+
+            futures.add(executor.submit(() -> {
+                System.out.println("[REQ " + requestNumber + "] Sending request with registroInicial=" + start);
+
+                WsSelfBookingService service = new WsSelfBookingService();
+                WsSelfBooking port = service.getWsSelfBookingPort();
+
+                BindingProvider bp = (BindingProvider) port;
+                Map<String, Object> ctx = bp.getRequestContext();
+                ctx.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, ENDPOINT);
+
+                PesquisarSolicitacaoRequest request = new PesquisarSolicitacaoRequest();
+                request.setDataInicial(factory.newXMLGregorianCalendar("2023-09-01T00:00:00"));
+                request.setDataFinal(factory.newXMLGregorianCalendar("2025-07-31T23:59:59"));
+                request.setRegistroInicial(start);
+                request.setQuantidadeRegistros(PAGE_SIZE);
+                request.setTipoSolicitacao("TODOS");
+
+                PesquisarSolicitacaoResponse response = port.pesquisarSolicitacao(KEY_CLIENT, USER_NAME, PASSWORD, request);
+                System.out.println("[REQ " + requestNumber + "] Response received for registroInicial=" + start);
+                return response;
+            }));
+
+            registroInicial += PAGE_SIZE;
+        }
+
         int fileCounter = 1;
         int responsesInFile = 0;
-
-        JAXBContext jaxbContext = JAXBContext.newInstance(PesquisarSolicitacaoResponse.class);
         List<PesquisarSolicitacaoResponse> buffer = new ArrayList<>();
 
-        // Process in batches of THREADS_PER_BATCH
-        for (int i = 0; i < TOTAL_REQUESTS; i += THREADS_PER_BATCH) {
-            List<Callable<PesquisarSolicitacaoResponse>> tasks = new ArrayList<>();
+        for (Future<PesquisarSolicitacaoResponse> future : futures) {
+            PesquisarSolicitacaoResponse resp = future.get();
+            buffer.add(resp);
+            responsesInFile++;
 
-            // Prepare up to 10 requests in this batch
-            for (int t = 0; t < THREADS_PER_BATCH && (i + t) < TOTAL_REQUESTS; t++) {
-                final int start = registroInicial;
-                final int requestNumber = i + t + 1;
-
-                tasks.add(() -> {
-                    System.out.println("[REQ " + requestNumber + "] Preparing request with registroInicial=" + start);
-
-                    WsSelfBookingService service = new WsSelfBookingService();
-                    WsSelfBooking port = service.getWsSelfBookingPort();
-
-                    BindingProvider bp = (BindingProvider) port;
-                    Map<String, Object> ctx = bp.getRequestContext();
-                    ctx.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, ENDPOINT);
-
-                    PesquisarSolicitacaoRequest request = new PesquisarSolicitacaoRequest();
-                    request.setDataInicial(factory.newXMLGregorianCalendar("2023-09-01T00:00:00"));
-                    request.setDataFinal(factory.newXMLGregorianCalendar("2025-07-31T23:59:59"));
-                    request.setRegistroInicial(start);
-                    request.setQuantidadeRegistros(PAGE_SIZE);
-                    request.setTipoSolicitacao("TODOS");
-
-                    PesquisarSolicitacaoResponse response = port.pesquisarSolicitacao(KEY_CLIENT, USER_NAME, PASSWORD, request);
-                    System.out.println("[REQ " + requestNumber + "] Response received for registroInicial=" + start);
-                    return response;
-                });
-
-                registroInicial += PAGE_SIZE;
-                if (registroInicial > TOTAL_RESULTS) break;
-            }
-
-            // Execute batch and wait for completion
-            List<Future<PesquisarSolicitacaoResponse>> results = executor.invokeAll(tasks);
-
-            for (Future<PesquisarSolicitacaoResponse> future : results) {
-                PesquisarSolicitacaoResponse resp = future.get();
-                buffer.add(resp);
-                responsesInFile++;
-
-                if (responsesInFile == 1000) {
-                    saveResponses(buffer, fileCounter++, jaxbContext);
-                    buffer.clear();
-                    responsesInFile = 0;
-                }
+            if (responsesInFile == 1000) {
+                saveResponses(buffer, fileCounter++, jaxbContext);
+                buffer.clear();
+                responsesInFile = 0;
             }
         }
 
@@ -102,10 +95,10 @@ public class Main {
         }
 
         executor.shutdown();
+        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 
         long totalTime = System.currentTimeMillis() - startTime;
-        System.out.println("=== Batch process completed in " 
-                           + (totalTime / 1000.0) + " seconds ===");
+        System.out.println("=== Process completed in " + (totalTime / 1000.0) + " seconds ===");
     }
 
     private static void saveResponses(List<PesquisarSolicitacaoResponse> responses, int fileNumber, JAXBContext ctx) throws Exception {
@@ -113,11 +106,10 @@ public class Main {
         try (FileOutputStream fos = new FileOutputStream(outFile)) {
             Marshaller marshaller = ctx.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-
             for (PesquisarSolicitacaoResponse r : responses) {
                 marshaller.marshal(r, fos);
             }
         }
-        System.out.println("[SAVE] File saved: " + outFile.getAbsolutePath() + " (" + responses.size() + " responses)");
+        System.out.println("[SAVE] Saved file: " + outFile.getAbsolutePath() + " (" + responses.size() + " responses)");
     }
 }
