@@ -6,13 +6,18 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
 import javax.xml.bind.Marshaller;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.ws.BindingProvider;
 
+import br.com.lemontech.wsclient.ObjectFactory;
 import br.com.lemontech.wsclient.PesquisarSolicitacaoRequest;
 import br.com.lemontech.wsclient.PesquisarSolicitacaoResponse;
 import br.com.lemontech.wsclient.WsSelfBooking;
@@ -30,6 +35,8 @@ public class Main {
     private static final int TOTAL_REQUESTS = (int) Math.ceil(TOTAL_RESULTS / (double) PAGE_SIZE);
 
     private static final int THREAD_POOL_SIZE = 50; // maximum concurrent threads
+    
+    private static final ObjectFactory factory = new ObjectFactory();
 
     public static void main(String[] args) throws Exception {
 
@@ -82,6 +89,7 @@ public class Main {
             PesquisarSolicitacaoResponse resp = future.get();
             buffer.add(resp);
             responsesInFile++;
+            System.out.println("Number response in file: " + responsesInFile);
 
             if (responsesInFile == 1000) {
                 saveResponses(buffer, fileCounter++, jaxbContext);
@@ -106,10 +114,13 @@ public class Main {
         try (FileOutputStream fos = new FileOutputStream(outFile)) {
             Marshaller marshaller = ctx.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+            
             for (PesquisarSolicitacaoResponse r : responses) {
-                marshaller.marshal(r, fos);
+                JAXBElement<PesquisarSolicitacaoResponse> element = factory.createPesquisarSolicitacaoResponse(r);
+                marshaller.marshal(element, fos);
             }
         }
         System.out.println("[SAVE] Saved file: " + outFile.getAbsolutePath() + " (" + responses.size() + " responses)");
     }
+
 }
